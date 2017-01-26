@@ -21,3 +21,7 @@ If something isn't working the way it should or a convention isn't being followe
 If there isn't documentation for something, I consider that a bug, too.
 
 Please note that this project is released with a Contributor Code of Conduct. By participating in this project, you agree to abide by its terms.
+
+## License ##
+
+This project is released under the MIT license, as detailed in the included `license.txt` file.
