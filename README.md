@@ -1,19 +1,23 @@
-# Breaker
+# Breaker #
 
-**TODO: Add description**
+A Circuit Breaker in Elixir for making HTTP(S) requests to external resources.
+Uses [HTTPotion](https://github.com/myfreeweb/httpotion) to make requests.
 
-## Installation
+Currently, this is still very basic and a work in progress, but the final product will:
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `breaker` to your list of dependencies in `mix.exs`:
+* Fail requests to a bad service.
+* Provide multiple options for handling recovery, potentially including:
+  * A basic timed recovery (let another request through in **x** seconds)
+  * An exponential backoff recovery (try again later no sooner than **x** seconds and no later than **y** seconds from the last failure, with an exponentially increasing time gap)
+  * A percent-based recovery (only let **x**% of requests through, until **y** successive requests)
+  * A rate-limiting recovery (only allow **x** requests in **y** seconds, until **z** successive requests)
 
-```elixir
-def deps do
-  [{:breaker, "~> 0.1.0"}]
-end
-```
+Not all of the above may be implemented, depending on time and complexity.
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/breaker](https://hexdocs.pm/breaker).
+## Contributing ##
 
+Bug reports are welcome and contributions are encouraged.
+If something isn't working the way it should or a convention isn't being followed, that's a bug.
+If there isn't documentation for something, I consider that a bug, too.
+
+Please note that this project is released with a Contributor Code of Conduct. By participating in this project, you agree to abide by its terms.
