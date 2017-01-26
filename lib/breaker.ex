@@ -21,15 +21,15 @@ defmodule Breaker do
   """
   def start_link(options) do
     options = options
-              |> Map.put_new(:open, true)
+              |> Map.put_new(:open, false)
     GenServer.start_link(__MODULE__, options)
   end
 
   @doc """
   Trip the circuit.
 
-  This sets the "open" status to false and has no effect if the "open" status
-  is already false.
+  This sets the "open" status to true and has no effect if the "open" status
+  is already true.
 
   This has the effect of cutting off communications using the circuit and
   starts the restoration process to test if the external source is healthy.
@@ -55,12 +55,12 @@ defmodule Breaker do
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/", open: false})
-      iex> Breaker.open?(circuit)
-      false
-      iex> Breaker.reset(circuit)
+      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/", open: true})
       iex> Breaker.open?(circuit)
       true
+      iex> Breaker.reset(circuit)
+      iex> Breaker.open?(circuit)
+      false
 
   """
   def reset(circuit) do
@@ -74,7 +74,7 @@ defmodule Breaker do
 
       iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/"})
       iex> Breaker.open?(circuit)
-      true
+      false
 
   """
   def open?(circuit) do
@@ -105,20 +105,20 @@ defmodule Breaker do
   def handle_call({:get, path}, _from, circuit) do
     cond do
       circuit.open ->
+        {:reply, %{status_code: 500}, circuit}
+      true ->
         request_address = URI.merge(circuit.addr, path)
         response = HTTPotion.get(request_address)
         {:reply, response, circuit}
-      true ->
-        {:reply, %{status_code: 500}, circuit}
     end
   end
 
   def handle_cast(:trip, circuit) do
-    circuit = Map.put(circuit, :open, false)
+    circuit = Map.put(circuit, :open, true)
     {:noreply, circuit}
   end
   def handle_cast(:reset, circuit) do
-    circuit = Map.put(circuit, :open, true)
+    circuit = Map.put(circuit, :open, false)
     {:noreply, circuit}
   end
 end
