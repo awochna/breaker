@@ -15,4 +15,10 @@ defmodule BreakerTest do
     assert response.status_code == 500
   end
 
+  test "single failure with tolerance level of 0 trips circuit" do
+    {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/", tolerance: 0})
+    Breaker.get(circuit, "/status/500")
+    assert Breaker.open?(circuit)
+  end
+
 end
