@@ -7,14 +7,10 @@ Uses [HTTPotion](https://github.com/myfreeweb/httpotion) to make requests.
 
 Currently, this is still very basic and a work in progress, but the final product will:
 
-* Fail requests to a bad service.
-* Provide multiple options for handling recovery, potentially including:
-  * A basic timed recovery (let another request through in **x** seconds)
-  * An exponential backoff recovery (try again later no sooner than **x** seconds and no later than **y** seconds from the last failure, with an exponentially increasing time gap)
-  * A percent-based recovery (only let **x**% of requests through, until **y** successive requests)
-  * A rate-limiting recovery (only allow **x** requests in **y** seconds, until **z** successive requests)
+* Fail requests to an unhealthy service.
+* Have a half-open state, for testing service health.
+* Allow you to force a request through.
 
-Not all of the above may be implemented, depending on time and complexity.
 
 ## Contributing ##
 
