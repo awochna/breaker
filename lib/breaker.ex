@@ -4,42 +4,39 @@ defmodule Breaker do
   resources and help your application gracefully fail.
   """
 
-  use GenServer
-
-  #####
-  # External Interface
-
   @doc """
   Create a new circuit-breaker with the given options map.
 
   Available options are:
 
-  * `addr`: The base address to use for the breaker. This is ideally a single
+  * `url`: The base url to use for the breaker. This is ideally a single
     external resource, complete with protocal, domain name, port, and an
     optional subpath. Required.
+  * `headers`: A keyword list of headers, passed to HTTPotion.
+  * `timeout`: How long to wait until considering the request timed out.
+    Passed to HTTPotion.
   * `open`: Boolean defining if the circuit is broken. Defaults to false.
-  * `tolerance`: The number of successive failures required to trip the circuit.
-    Default: 2
-  * `recovery`: Settings for the circuit recovery, a map of the following:
-    * `type`: Currently, only `:timed` is implemented. Default.
-    * `wait`: Used in the `timed` option, the number of milliseconds before
-      attempting another request. Default: 30000
+  * `error_threshold`: The percent of requests allowed to fail, as a float.
+    Defaults to 0.05 (5%)
+  * `window_length`: The number of buckets in the health calculation window.
+    Defaults to 10.
+  * `bucket_length`: The number of milliseconds for each bucket. Defaults to
+    1000, meaning health is caluculated over the past 10 seconds using the
+    defaults.
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/"})
-      iex> is_pid(circuit)
+      iex> options = %{url: "http://localhost:8080/"}
+      iex> circuit = Breaker.new(options)
+      iex> is_map(circuit)
       true
 
   """
-  def start_link(options) do
-    options = options
-              |> Map.put_new(:open, false)
-              |> Map.put_new(:tolerance, 2)
-              |> Map.put_new(:recovery, %{type: :timed, wait: 30000})
-              |> Map.put_new(:misses, 0)
-              |> Map.put_new(:hits, 0)
-    GenServer.start_link(__MODULE__, options)
+  def new(options) do
+    {:ok, agent} = options
+    |> Map.take([:open, :error_threshold])
+    |> Breaker.Agent.start_link()
+    Map.put(options, :status, agent)
   end
 
   @doc """
@@ -53,7 +50,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/"})
+      iex> circuit = Breaker.new(%{url: "http://localhost:8080/"})
       iex> response = Breaker.get(circuit, "/get")
       iex> response.status_code
       200
@@ -64,7 +61,7 @@ defmodule Breaker do
 
   """
   def trip(circuit) do
-    GenServer.cast(circuit, :trip)
+    Breaker.Agent.trip(circuit.status)
   end
 
   @doc """
@@ -72,7 +69,8 @@ defmodule Breaker do
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/", open: true})
+      iex> options = %{url: "http://localhost:8080/", open: true}
+      iex> circuit = Breaker.new(options)
       iex> Breaker.open?(circuit)
       true
       iex> Breaker.reset(circuit)
@@ -81,7 +79,7 @@ defmodule Breaker do
 
   """
   def reset(circuit) do
-    GenServer.cast(circuit, :reset)
+    Breaker.Agent.reset(circuit.status)
   end
 
   @doc """
@@ -89,13 +87,14 @@ defmodule Breaker do
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/"})
+      iex> options = %{url: "http://localhost:8080/"}
+      iex> circuit = Breaker.new(options)
       iex> Breaker.open?(circuit)
       false
 
   """
   def open?(circuit) do
-    GenServer.call(circuit, :status)
+    Breaker.Agent.open?(circuit.status)
   end
 
   @doc ~S"""
@@ -103,111 +102,25 @@ defmodule Breaker do
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{addr: "http://localhost:8080/"})
+      iex> options = %{url: "http://localhost:8080/"}
+      iex> circuit = Breaker.new(options)
       iex> response = Breaker.get(circuit, "/ip")
       iex> response.body
       "{\n  \"origin\": \"127.0.0.1\"\n}"
 
   """
   def get(circuit, path) do
-    GenServer.call(circuit, {:get, path})
-  end
-
-  #####
-  # GenServer interface
-
-  def handle_call(:status, _from, circuit) do
-    {:reply, circuit.open, circuit}
-  end
-  def handle_call({:get, path}, _from, circuit) do
+    %{status: agent, url: url} = circuit
     cond do
-      circuit.open ->
-        {:reply, %{status_code: 500}, circuit}
+      Breaker.Agent.open?(agent) ->
+        # This should respond in a HTTPotion-transparent way.
+        %{status_code: 500}
       true ->
-        request_address = URI.merge(circuit.addr, path)
+        request_address = URI.merge(url, path)
         response = HTTPotion.get(request_address)
-        circuit = circuit
-        |> Breaker.record(response)
-        |> Breaker.calculate_status
-        {:reply, response, circuit}
-    end
-  end
-
-  def handle_cast(:trip, circuit) do
-    circuit = Map.put(circuit, :open, true)
-    {:noreply, circuit}
-  end
-  def handle_cast(:reset, circuit) do
-    circuit = Map.put(circuit, :open, false)
-    {:noreply, circuit}
-  end
-
-  #####
-  # Private interface
-
-  @doc """
-  Mark a response as a hit or a miss.
-
-  A miss is a 500 currently, but this should also include a timeout error.
-
-  The `circuit` passed is the state Map, not the PID.
-
-  Returns new circuit state.
-
-  The current implementation is extremely naive, we reset our count of `misses`
-  when we get a confirmed hit.
-
-  ## Parameters: ##
-
-  * `circuit`: Map of circuit state.
-  * `response`: Response from external request.
-
-  ## Examples: ##
-
-      iex> circuit = %{misses: 0}
-      iex> Breaker.record(circuit, %{status_code: 500})
-      %{misses: 1}
-
-      iex> circuit = %{misses: 1}
-      iex> Breaker.record(circuit, %{status_code: 200})
-      %{misses: 0}
-
-  """
-  def record(circuit, %{status_code: 500}) do
-    Map.update!(circuit, :misses, &(&1 + 1))
-  end
-  def record(circuit, _response) do
-    Map.put(circuit, :misses, 0)
-  end
-
-  @doc """
-  Calculate if the breaker should be open or closed.
-
-  ## Parameters: ##
-
-  * `circuit`: The circuit state map.
-
-  ## Examples: ##
-
-      iex> circuit = %{misses: 0, tolerance: 1, open: true}
-      iex> Breaker.calculate_status(circuit)
-      %{misses: 0, tolerance: 1, open: false}
-
-      iex> circuit = %{misses: 2, tolerance: 1, open: false}
-      iex> Breaker.calculate_status(circuit)
-      %{misses: 2, tolerance: 1, open: true}
-
-      iex> circuit = %{misses: 1, tolerance: 1, open: false}
-      iex> Breaker.calculate_status(circuit)
-      %{misses: 1, tolerance: 1, open: false}
-
-  """
-  def calculate_status(circuit) do
-    cond do
-      circuit.misses > circuit.tolerance ->
-        Map.put(circuit, :open, true)
-      true ->
-        Map.put(circuit, :open, false)
+        Breaker.Agent.count(agent, response)
+        Breaker.Agent.calculate_status(agent)
+        response
     end
   end
 end
