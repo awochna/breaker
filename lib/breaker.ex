@@ -2,7 +2,13 @@ defmodule Breaker do
   @moduledoc """
   A circuit-breaker wrapped around HTTPotion to make requests to external
   resources and help your application gracefully fail.
+
+  Also defines the `%Breaker{}` struct which represents a request circuit
+  breaker, used with this module.
   """
+
+  @enforce_keys [:url]
+  defstruct url: nil, headers: [], timeout: 3000, status: nil
 
   @doc """
   Create a new circuit-breaker with the given options map.
@@ -30,13 +36,17 @@ defmodule Breaker do
       iex> circuit = Breaker.new(options)
       iex> is_map(circuit)
       true
+      iex> circuit.__struct__
+      Breaker
 
   """
   def new(options) do
     {:ok, agent} = options
     |> Map.take([:open, :error_threshold])
     |> Breaker.Agent.start_link()
-    Map.put(options, :status, agent)
+    %Breaker{url: options.url}
+    |> Map.merge(Map.take(options, [:timeout, :headers]))
+    |> Map.put(:status, agent)
   end
 
   @doc """
