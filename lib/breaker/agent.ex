@@ -46,7 +46,7 @@ defmodule Breaker.Agent do
       true
 
   """
-  def start_link(options) do
+  def start_link(options \\ %{}) do
     options = options
     |> Map.put_new(:open, false)
     |> Map.put_new(:error_threshold, 0.05)
@@ -229,7 +229,7 @@ defmodule Breaker.Agent do
   """
   def roll(circuit) do
     Agent.update(circuit, fn(state) ->
-      Map.update!(state, :window, &([%{total: 0, errors: 0} | &1]))
+      state = Map.update!(state, :window, &([%{total: 0, errors: 0} | &1]))
       cond do
         length(state.window) > state.window_length ->
           {removed, window} = List.pop_at(state.window, -1)

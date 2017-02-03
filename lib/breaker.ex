@@ -38,6 +38,8 @@ defmodule Breaker do
       true
       iex> circuit.__struct__
       Breaker
+      iex> is_pid(circuit.status)
+      true
 
   """
   def new(options) do
