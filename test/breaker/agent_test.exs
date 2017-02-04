@@ -97,6 +97,26 @@ defmodule BreakerAgentTest do
     assert now.errors == 0
   end
 
+  test "rolls the window after the given `bucket_length`" do
+    {:ok, agent} = Breaker.Agent.start_link(%{bucket_length: 500})
+    :timer.sleep(750)
+    window = get_window(agent)
+    assert length(window) == 2
+  end
+  
+  test "rolling also recalculates the circuit's status" do
+    {:ok, agent} = Breaker.Agent.start_link(%{sum: %{total: 50, errors: 50}})
+    refute Breaker.Agent.open?(agent)
+    Breaker.Agent.roll(agent)
+    assert Breaker.Agent.open?(agent)
+  end
+
+  test "automatic rolling also recalculates the circuit's status" do
+    {:ok, agent} = Breaker.Agent.start_link(%{open: true})
+    :timer.sleep(1250)
+    refute Breaker.Agent.open?(agent)
+  end
+
   defp get_window(agent), do: Agent.get(agent, &(&1.window))
   
   defp get_sum(agent), do: Agent.get(agent, &(&1.sum))

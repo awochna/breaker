@@ -54,7 +54,9 @@ defmodule Breaker.Agent do
     |> Map.put_new(:bucket_length, 1000)
     |> Map.put_new(:window, [%{total: 0, errors: 0}])
     |> Map.put_new(:sum, %{total: 0, errors: 0})
-    Agent.start_link(fn -> options end)
+    {:ok, agent} = Agent.start_link(fn -> options end)
+    :timer.apply_interval(options.bucket_length, __MODULE__, :roll, [agent])
+    {:ok, agent}
   end
 
   @doc """
@@ -185,10 +187,14 @@ defmodule Breaker.Agent do
   """
   def calculate_status(circuit) do
     state = Agent.get(circuit, &(&1))
-    error_rate = state.sum.errors / state.sum.total
-    Agent.update(circuit, &Map.update!(&1, :open, fn(_) ->
-      error_rate > state.error_threshold
-    end))
+    cond do
+      state.sum.total == 0 ->
+        Agent.update(circuit, &Map.put(&1, :open, false))
+      true ->
+        error_rate = state.sum.errors / state.sum.total
+        status = error_rate > state.error_threshold
+        Agent.update(circuit, &Map.put(&1, :open, status))
+    end
   end
 
   @doc """
@@ -224,6 +230,7 @@ defmodule Breaker.Agent do
           state
       end
     end)
+    calculate_status(circuit)
   end
 
   @doc """
