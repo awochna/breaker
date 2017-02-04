@@ -20,5 +20,4 @@ defmodule BreakerTest do
     Breaker.get(circuit, "/status/500")
     assert Breaker.open?(circuit)
   end
-
 end
