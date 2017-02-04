@@ -139,48 +139,28 @@ defmodule Breaker.Agent do
 
       iex> window = [%{total: 0, errors: 0}]
       iex> {:ok, circuit} = Breaker.Agent.start_link(%{window: window})
-      iex> Breaker.Agent.count(circuit, %{status_code: 200})
+      iex> Breaker.Agent.count(circuit, %HTTPotion.Response{status_code: 200})
       :ok
 
       iex> window = [%{total: 1, errors: 0}]
       iex> {:ok, circuit} = Breaker.Agent.start_link(%{window: window})
-      iex> Breaker.Agent.count(circuit, %{status_code: 500})
+      iex> Breaker.Agent.count(circuit, %HTTPotion.Response{status_code: 500})
       :ok
 
       iex> window = [%{total: 0, errors: 0}, %{total: 2, errors: 1}]
       iex> {:ok, circuit} = Breaker.Agent.start_link(%{window: window})
-      iex> Breaker.Agent.count(circuit, %{status_code: 200})
+      iex> Breaker.Agent.count(circuit, %HTTPotion.Response{status_code: 200})
       :ok
 
   """
   def count(circuit, response) do
-    case response.status_code do
-      200 ->
-        Agent.update(circuit, fn(circuit) ->
-          circuit
-          |> Map.update!(:window, fn([current | rest]) ->
-            current = Map.update!(current, :total, &(&1 + 1))
-            [current | rest]
-          end)
-          |> Map.update!(:sum, fn(sum) ->
-            Map.update!(sum, :total, &(&1 + 1))
-          end)
-        end)
-      500 ->
-        Agent.update(circuit, fn(circuit) ->
-          circuit
-          |> Map.update!(:window, fn([current | rest]) ->
-            current = current
-            |> Map.update!(:total, &(&1 + 1))
-            |> Map.update!(:errors, &(&1 + 1))
-            [current | rest]
-          end)
-          |> Map.update!(:sum, fn(sum) ->
-            sum
-            |> Map.update!(:total, &(&1 + 1))
-            |> Map.update!(:errors, &(&1 + 1))
-          end)
-        end)
+    cond do
+      response.__struct__ == HTTPotion.ErrorResponse ->
+        Agent.update(circuit, __MODULE__, :count_miss, [])
+      response.status_code == 500 ->
+        Agent.update(circuit, __MODULE__, :count_miss, [])
+      true ->
+        Agent.update(circuit, __MODULE__, :count_hit, [])
     end
   end
 
@@ -244,5 +224,46 @@ defmodule Breaker.Agent do
           state
       end
     end)
+  end
+
+  @doc """
+  Count a miss (error) in the current window and the sum of the passed Map.
+
+  ## Examples: ##
+
+      iex> circuit = %{window: [%{total: 0, errors: 0}], sum: %{total: 0, errors: 0}}
+      iex> Breaker.Agent.count_miss(circuit)
+      %{window: [%{total: 1, errors: 1}], sum: %{total: 1, errors: 1}}
+
+  """
+  def count_miss(circuit) do
+    circuit
+    |> Map.update!(:window, fn([current | rest]) ->
+      current = current
+      |> Map.update!(:total, &(&1 + 1))
+      |> Map.update!(:errors, &(&1 + 1))
+      [current | rest]
+    end)
+    |> Map.update!(:sum, fn(sum) ->
+      sum |> Map.update!(:total, &(&1 + 1)) |> Map.update!(:errors, &(&1 + 1))
+    end)
+  end
+
+  @doc """
+  Count a hit (sucessful request) in the current window and sums of the passed Map.
+
+  ## Examples: ##
+
+      iex> circuit = %{window: [%{total: 0, errors: 0}], sum: %{total: 0, errors: 0}}
+      iex> Breaker.Agent.count_hit(circuit)
+      %{window: [%{total: 1, errors: 0}], sum: %{total: 1, errors: 0}}
+
+  """
+  def count_hit(circuit) do
+    circuit
+    |> Map.update!(:window, fn([current | rest]) ->
+      [Map.update!(current, :total, &(&1 + 1)) | rest]
+    end)
+    |> Map.update!(:sum, fn(sum) -> Map.update!(sum, :total, &(&1 + 1)) end)
   end
 end

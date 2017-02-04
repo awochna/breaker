@@ -121,7 +121,7 @@ defmodule Breaker do
         %Breaker.OpenCircuitError{}
       true ->
         request_address = URI.merge(url, path)
-        response = HTTPotion.get(request_address)
+        response = HTTPotion.get(request_address, [timeout: circuit.timeout])
         Breaker.Agent.count(agent, response)
         Breaker.Agent.calculate_status(agent)
         response

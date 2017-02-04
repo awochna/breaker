@@ -20,4 +20,11 @@ defmodule BreakerTest do
     Breaker.get(circuit, "/status/500")
     assert Breaker.open?(circuit)
   end
+
+  test "timed out request withh error_threshold level of 0 trips circuit" do
+    circuit = Breaker.new(%{url: "http://localhost:8080/", error_threshold: 0,
+      timeout: 500})
+    Breaker.get(circuit, "/delay/1")
+    assert Breaker.open?(circuit)
+  end
 end

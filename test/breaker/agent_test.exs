@@ -18,7 +18,7 @@ defmodule BreakerAgentTest do
   test "the state agent can count a response in the current bucket" do
     {:ok, agent} = Breaker.Agent.start_link()
     then = get_current_bucket(agent)
-    Breaker.Agent.count(agent, %{status_code: 200})
+    Breaker.Agent.count(agent, %HTTPotion.Response{status_code: 200})
     now = get_current_bucket(agent)
     assert then.total == 0
     assert now.total == 1
@@ -27,11 +27,20 @@ defmodule BreakerAgentTest do
   test "the state agent can count an error response in the current bucket" do
     {:ok, agent} = Breaker.Agent.start_link()
     then = get_current_bucket(agent)
-    Breaker.Agent.count(agent, %{status_code: 500})
+    Breaker.Agent.count(agent, %HTTPotion.Response{status_code: 500})
     now = get_current_bucket(agent)
     assert then.total == 0
     assert then.errors == 0
     assert now.total == 1
+    assert now.errors == 1
+  end
+
+  test "the state agent counts %HTTPotion.ErrorResponse{} as an error" do
+    {:ok, agent} = Breaker.Agent.start_link()
+    then = get_current_bucket(agent)
+    Breaker.Agent.count(agent, %HTTPotion.ErrorResponse{message: "req_timedout"})
+    now = get_current_bucket(agent)
+    assert then.errors == 0
     assert now.errors == 1
   end
     
@@ -57,7 +66,7 @@ defmodule BreakerAgentTest do
   test "counting a response updates the values in `sum`" do
     {:ok, agent} = Breaker.Agent.start_link()
     then = get_sum(agent)
-    Breaker.Agent.count(agent, %{status_code: 200})
+    Breaker.Agent.count(agent, %HTTPotion.Response{status_code: 200})
     now = get_sum(agent)
     assert then.total == 0
     assert now.total == 1
@@ -66,7 +75,7 @@ defmodule BreakerAgentTest do
   test "counting an error response updates the values in `sum`" do
     {:ok, agent} = Breaker.Agent.start_link()
     then = get_sum(agent)
-    Breaker.Agent.count(agent, %{status_code: 500})
+    Breaker.Agent.count(agent, %HTTPotion.Response{status_code: 500})
     now = get_sum(agent)
     assert then.total == 0
     assert then.errors == 0
@@ -76,8 +85,8 @@ defmodule BreakerAgentTest do
 
   test "rolling a bucket out of the window removes those values from `sum`" do
     {:ok, agent} = Breaker.Agent.start_link(%{window_length: 2})
-    Breaker.Agent.count(agent, %{status_code: 200})
-    Breaker.Agent.count(agent, %{status_code: 500})
+    Breaker.Agent.count(agent, %HTTPotion.Response{status_code: 200})
+    Breaker.Agent.count(agent, %HTTPotion.Response{status_code: 500})
     then = get_sum(agent)
     Breaker.Agent.roll(agent)
     Breaker.Agent.roll(agent)
