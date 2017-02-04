@@ -12,7 +12,7 @@ defmodule BreakerTest do
     circuit = Breaker.new(%{url: "http://localhost:8080/"})
     Breaker.trip(circuit)
     response = Breaker.get(circuit, "/get")
-    assert response.status_code == 500
+    assert response.__struct__ == Breaker.OpenCircuitError
   end
 
   test "single failure with error_threshold level of 0 trips circuit" do

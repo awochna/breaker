@@ -67,9 +67,8 @@ defmodule Breaker do
       iex> response.status_code
       200
       iex> Breaker.trip(circuit)
-      iex> response = Breaker.get(circuit, "/get")
-      iex> response.status_code
-      500
+      iex> Breaker.get(circuit, "/get")
+      %Breaker.OpenCircuitError{message: "circuit is open"}
 
   """
   def trip(circuit), do: Breaker.Agent.trip(circuit.status)
@@ -119,8 +118,7 @@ defmodule Breaker do
     %{status: agent, url: url} = circuit
     cond do
       Breaker.Agent.open?(agent) ->
-        # This should respond in a HTTPotion-transparent way.
-        %{status_code: 500}
+        %Breaker.OpenCircuitError{}
       true ->
         request_address = URI.merge(url, path)
         response = HTTPotion.get(request_address)
