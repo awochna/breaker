@@ -88,17 +88,9 @@ defmodule BreakerAgentTest do
     assert now.errors == 0
   end
 
-  defp get_window(agent) do
-    Agent.get(agent, &(&1.window))
-  end
+  defp get_window(agent), do: Agent.get(agent, &(&1.window))
   
-  defp get_sum(agent) do
-    Agent.get(agent, &(&1.sum))
-  end
+  defp get_sum(agent), do: Agent.get(agent, &(&1.sum))
 
-  defp get_current_bucket(agent) do
-    agent
-    |> get_window()
-    |> List.first()
-  end
+  defp get_current_bucket(agent), do: agent |> get_window() |> List.first()
 end

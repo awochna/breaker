@@ -72,9 +72,7 @@ defmodule Breaker do
       500
 
   """
-  def trip(circuit) do
-    Breaker.Agent.trip(circuit.status)
-  end
+  def trip(circuit), do: Breaker.Agent.trip(circuit.status)
 
   @doc """
   Reset the circuit breaker.
@@ -90,9 +88,7 @@ defmodule Breaker do
       false
 
   """
-  def reset(circuit) do
-    Breaker.Agent.reset(circuit.status)
-  end
+  def reset(circuit), do: Breaker.Agent.reset(circuit.status)
 
   @doc """
   Ask if the circuit is open or not.
@@ -105,9 +101,7 @@ defmodule Breaker do
       false
 
   """
-  def open?(circuit) do
-    Breaker.Agent.open?(circuit.status)
-  end
+  def open?(circuit), do: Breaker.Agent.open?(circuit.status)
 
   @doc ~S"""
   Send a GET request to the path on the address.
