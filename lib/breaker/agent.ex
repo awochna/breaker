@@ -180,21 +180,13 @@ defmodule Breaker.Agent do
       iex> {:ok, circuit} = Breaker.Agent.start_link(options)
       iex> Breaker.Agent.open?(circuit)
       false
-      iex> Breaker.Agent.calculate_status(circuit)
+      iex> Breaker.Agent.recalculate(circuit)
       iex> Breaker.Agent.open?(circuit)
       true
 
   """
-  def calculate_status(circuit) do
-    state = Agent.get(circuit, &(&1))
-    cond do
-      state.sum.total == 0 ->
-        Agent.update(circuit, &Map.put(&1, :open, false))
-      true ->
-        error_rate = state.sum.errors / state.sum.total
-        status = error_rate > state.error_threshold
-        Agent.update(circuit, &Map.put(&1, :open, status))
-    end
+  def recalculate(circuit) do
+    Agent.update(circuit, __MODULE__, :calculate_status, [])
   end
 
   @doc """
@@ -214,23 +206,7 @@ defmodule Breaker.Agent do
 
   """
   def roll(circuit) do
-    Agent.update(circuit, fn(state) ->
-      state = Map.update!(state, :window, &([%{total: 0, errors: 0} | &1]))
-      cond do
-        length(state.window) > state.window_length ->
-          {removed, window} = List.pop_at(state.window, -1)
-          state
-          |> Map.put(:window, window)
-          |> Map.update!(:sum, fn(sum) ->
-            sum
-            |> Map.update!(:total, &(&1 - removed.total))
-            |> Map.update!(:errors, &(&1 - removed.errors))
-          end)
-        true ->
-          state
-      end
-    end)
-    calculate_status(circuit)
+    Agent.update(circuit, __MODULE__, :roll_window, [])
   end
 
   @doc """
@@ -245,15 +221,8 @@ defmodule Breaker.Agent do
   """
   def count_miss(circuit) do
     circuit
-    |> Map.update!(:window, fn([current | rest]) ->
-      current = current
-      |> Map.update!(:total, &(&1 + 1))
-      |> Map.update!(:errors, &(&1 + 1))
-      [current | rest]
-    end)
-    |> Map.update!(:sum, fn(sum) ->
-      sum |> Map.update!(:total, &(&1 + 1)) |> Map.update!(:errors, &(&1 + 1))
-    end)
+    |> add_to_current_window(:error)
+    |> add_to_sum(:error)
   end
 
   @doc """
@@ -268,9 +237,71 @@ defmodule Breaker.Agent do
   """
   def count_hit(circuit) do
     circuit
-    |> Map.update!(:window, fn([current | rest]) ->
+    |> add_to_current_window(:total)
+    |> add_to_sum(:total)
+  end
+
+  def roll_window(state) do
+    state
+    |> shift_window()
+    |> trim_window()
+    |> calculate_status()
+  end
+
+  def calculate_status(state) do
+    cond do
+      state.sum.total == 0 ->
+        Map.put(state, :open, false)
+      true ->
+        error_rate = state.sum.errors / state.sum.total
+        Map.put(state, :open, error_rate > state.error_threshold)
+    end
+  end
+
+  defp shift_window(state) do
+    Map.update!(state, :window, &([%{total: 0, errors: 0} | &1]))
+  end
+
+  defp trim_window(state) do
+    cond do
+      length(state.window) > state.window_length ->
+        {removed, window} = List.pop_at(state.window, -1)
+        state
+        |> Map.put(:window, window)
+        |> Map.update!(:sum, fn(sum) ->
+          sum
+          |> Map.update!(:total, &(&1 - removed.total))
+          |> Map.update!(:errors, &(&1 - removed.errors))
+        end)
+      true ->
+        state
+    end
+  end
+
+  defp add_to_current_window(circuit, :total) do
+    Map.update!(circuit, :window, fn([current | rest]) ->
       [Map.update!(current, :total, &(&1 + 1)) | rest]
     end)
-    |> Map.update!(:sum, fn(sum) -> Map.update!(sum, :total, &(&1 + 1)) end)
+  end
+  defp add_to_current_window(circuit, :error) do
+    Map.update!(circuit, :window, fn([current | rest]) ->
+      current = current
+      |> Map.update!(:total, &(&1 + 1))
+      |> Map.update!(:errors, &(&1 + 1))
+      [current | rest]
+    end)
+  end
+
+  defp add_to_sum(circuit, :total) do
+    Map.update!(circuit, :sum, fn(sum) ->
+      Map.update!(sum, :total, &(&1 + 1))
+    end)
+  end
+  defp add_to_sum(circuit, :error) do
+    Map.update!(circuit, :sum, fn(sum) ->
+      sum
+      |> Map.update!(:total, &(&1 + 1))
+      |> Map.update!(:errors, &(&1 + 1))
+    end)
   end
 end
