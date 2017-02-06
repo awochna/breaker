@@ -32,7 +32,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://localhost:8080/"}
+      iex> options = %{url: "http://httpbin.org/"}
       iex> circuit = Breaker.new(options)
       iex> is_map(circuit)
       true
@@ -62,7 +62,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> circuit = Breaker.new(%{url: "http://localhost:8080/"})
+      iex> circuit = Breaker.new(%{url: "http://httpbin.org/"})
       iex> response = Breaker.get(circuit, "/get")
       iex> response.status_code
       200
@@ -78,7 +78,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://localhost:8080/", open: true}
+      iex> options = %{url: "http://httpbin.org/", open: true}
       iex> circuit = Breaker.new(options)
       iex> Breaker.open?(circuit)
       true
@@ -94,7 +94,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://localhost:8080/"}
+      iex> options = %{url: "http://httpbin.org/"}
       iex> circuit = Breaker.new(options)
       iex> Breaker.open?(circuit)
       false
@@ -107,11 +107,11 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://localhost:8080/"}
+      iex> options = %{url: "http://httpbin.org/"}
       iex> circuit = Breaker.new(options)
-      iex> response = Breaker.get(circuit, "/ip")
-      iex> response.body
-      "{\n  \"origin\": \"127.0.0.1\"\n}"
+      iex> response = Breaker.get(circuit, "/get")
+      iex> response.status_code
+      200
 
   """
   def get(circuit, path) do
@@ -123,7 +123,7 @@ defmodule Breaker do
         request_address = URI.merge(url, path)
         response = HTTPotion.get(request_address, [timeout: circuit.timeout])
         Breaker.Agent.count(agent, response)
-        Breaker.Agent.calculate_status(agent)
+        Breaker.Agent.recalculate(agent)
         response
     end
   end
