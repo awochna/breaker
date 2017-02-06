@@ -22,3 +22,7 @@ erl_crash.dump
 # Also ignore vim files
 *.swp
 *.swo
+
+# Also ignore benchmark output
+/bench/graphs
+/bench/snapshots
