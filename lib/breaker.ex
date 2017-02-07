@@ -7,6 +7,8 @@ defmodule Breaker do
   breaker, used with this module.
   """
 
+  use HTTPotion.Base
+
   @enforce_keys [:url]
   defstruct url: nil, headers: [], timeout: 3000, status: nil
 
@@ -114,7 +116,7 @@ defmodule Breaker do
       200
 
   """
-  def get(circuit, path) do
+  def old_get(circuit, path) do
     %{status: agent, url: url} = circuit
     cond do
       Breaker.Agent.open?(agent) ->
@@ -122,6 +124,57 @@ defmodule Breaker do
       true ->
         request_address = URI.merge(url, path)
         response = HTTPotion.get(request_address, [timeout: circuit.timeout])
+        Breaker.Agent.count(agent, response)
+        Breaker.Agent.recalculate(agent)
+        response
+    end
+  end
+
+  #####
+  # HTTPotion integration
+
+  def get(circuit, path, options \\ []) do
+    make_request(circuit, path, :get, options)
+  end
+
+  def put(circuit, path, options \\ []) do
+    make_request(circuit, path, :put, options)
+  end
+
+  def head(circuit, path, options \\ []) do
+    make_request(circuit, path, :head, options)
+  end
+
+  def post(circuit, path, options \\ []) do
+    make_request(circuit, path, :post, options)
+  end
+
+  def patch(circuit, path, options \\ []) do
+    make_request(circuit, path, :patch, options)
+  end
+
+  def delete(circuit, path, options \\ []) do
+    make_request(circuit, path, :delete, options)
+  end
+
+  def options(circuit, path, options \\ []) do
+    make_request(circuit, path, :options, options)
+  end
+
+  defp make_request(circuit, path, method, options \\ []) do
+    %{status: agent, url: url} = circuit
+    cond do
+      Breaker.Agent.open?(agent) ->
+        %Breaker.OpenCircuitError{}
+      true ->
+        headers = options
+        |> Keyword.get(:headers, [])
+        |> Keyword.merge(circuit.headers, fn(_key, v1, _v2) -> v1 end)
+        options = options
+        |> Keyword.put_new(:timeout, circuit.timeout)
+        |> Keyword.put(:headers, headers)
+        request_address = URI.merge(url, path)
+        response = request(method, request_address, options)
         Breaker.Agent.count(agent, response)
         Breaker.Agent.recalculate(agent)
         response
