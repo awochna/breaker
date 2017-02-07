@@ -2,7 +2,7 @@ defmodule BreakerBench do
   use Benchfella
 
   bench "create a breaker" do
-    Breaker.new(%{url: "http://localhost:8080"})
+    Breaker.new(%{url: "http://httpbin.org/"})
     :ok
   end
 end
