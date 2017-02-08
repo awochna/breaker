@@ -5,9 +5,11 @@ defmodule Breaker do
 
   Also defines the `%Breaker{}` struct which represents a request circuit
   breaker, used with this module.
-  """
 
-  use HTTPotion.Base
+  Defines a function for each HTTP method (ie `Breaker.get()`) that returns a
+  Task that will execute the HTTP request (using HTTPotion) and record the
+  response in the circuit breaker.
+  """
 
   @enforce_keys [:url]
   defstruct url: nil, headers: [], timeout: 3000, status: nil
@@ -65,11 +67,11 @@ defmodule Breaker do
   Examples:
 
       iex> circuit = Breaker.new(%{url: "http://httpbin.org/"})
-      iex> response = Breaker.get(circuit, "/get")
+      iex> response = Breaker.get(circuit, "/get") |> Task.await
       iex> response.status_code
       200
       iex> Breaker.trip(circuit)
-      iex> Breaker.get(circuit, "/get")
+      iex> Breaker.get(circuit, "/get") |> Task.await
       %Breaker.OpenCircuitError{message: "circuit is open"}
 
   """
@@ -105,37 +107,37 @@ defmodule Breaker do
   def open?(circuit), do: Breaker.Agent.open?(circuit.status)
 
   #####
-  # HTTPotion integration
+  # Request calls
 
   def get(circuit, path, options \\ []) do
-    make_request(circuit, path, :get, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :get, options])
   end
 
   def put(circuit, path, options \\ []) do
-    make_request(circuit, path, :put, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :put, options])
   end
 
   def head(circuit, path, options \\ []) do
-    make_request(circuit, path, :head, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :head, options])
   end
 
   def post(circuit, path, options \\ []) do
-    make_request(circuit, path, :post, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :post, options])
   end
 
   def patch(circuit, path, options \\ []) do
-    make_request(circuit, path, :patch, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :patch, options])
   end
 
   def delete(circuit, path, options \\ []) do
-    make_request(circuit, path, :delete, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :delete, options])
   end
 
   def options(circuit, path, options \\ []) do
-    make_request(circuit, path, :options, options)
+    Task.async(__MODULE__, :make_request, [circuit, path, :options, options])
   end
 
-  defp make_request(circuit, path, method, options \\ []) do
+  def make_request(circuit, path, method, options \\ []) do
     %{status: agent, url: url} = circuit
     cond do
       Breaker.Agent.open?(agent) ->
@@ -148,7 +150,7 @@ defmodule Breaker do
         |> Keyword.put_new(:timeout, circuit.timeout)
         |> Keyword.put(:headers, headers)
         request_address = URI.merge(url, path)
-        response = request(method, request_address, options)
+        response = HTTPotion.request(method, request_address, options)
         Breaker.Agent.count(agent, response)
         Breaker.Agent.recalculate(agent)
         response
