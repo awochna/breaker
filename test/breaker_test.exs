@@ -54,6 +54,12 @@ defmodule BreakerTest do
       assert response.status_code == 200
     end
 
+    test "put without body" do
+      circuit = Breaker.new(%{url: "http://httpbin.org/"})
+      response = Breaker.put(circuit, "/put") |> Task.await
+      assert response.status_code == 200
+    end
+
     test "head" do
       circuit = Breaker.new(%{url: "http://httpbin.org/"})
       response = Breaker.head(circuit, "/get") |> Task.await
@@ -66,9 +72,21 @@ defmodule BreakerTest do
       assert response.status_code == 200
     end
 
+    test "post without body" do
+      circuit = Breaker.new(%{url: "http://httpbin.org/"})
+      response = Breaker.post(circuit, "/post") |> Task.await
+      assert response.status_code == 200
+    end
+
     test "patch" do
       circuit = Breaker.new(%{url: "http://httpbin.org/"})
       response = Breaker.patch(circuit, "/patch", [body: "hello"]) |> Task.await
+      assert response.status_code == 200
+    end
+
+    test "patch without body" do
+      circuit = Breaker.new(%{url: "http://httpbin.org/"})
+      response = Breaker.patch(circuit, "/patch") |> Task.await
       assert response.status_code == 200
     end
 

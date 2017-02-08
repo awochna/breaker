@@ -11,6 +11,18 @@ defmodule Breaker do
   response in the circuit breaker.
   """
 
+  @typedoc """
+  A %Breaker{} struct containing information for the circuit.
+
+  It holds:
+
+  * `url`: The base url associated with the breaker.
+  * `headers`: Additional headers to use when making requests.
+  * `timeout`: The time to wait (in ms) before giving up on a request.
+  * `status`: The process containing the circuit breaker's counts and state.
+  """
+  @type t :: %Breaker{url: String.t, headers: [...], timeout: number, status: pid}
+
   @enforce_keys [:url]
   defstruct url: nil, headers: [], timeout: 3000, status: nil
 
@@ -46,11 +58,12 @@ defmodule Breaker do
       true
 
   """
+  @spec new(%{url: String.t}) :: Breaker.t
   def new(options) do
     {:ok, agent} = options
     |> Map.take([:open, :error_threshold])
     |> Breaker.Agent.start_link()
-    %Breaker{url: options.url}
+    %Breaker{url: Map.get(options, :url)}
     |> Map.merge(Map.take(options, [:timeout, :headers]))
     |> Map.put(:status, agent)
   end
@@ -75,6 +88,7 @@ defmodule Breaker do
       %Breaker.OpenCircuitError{message: "circuit is open"}
 
   """
+  @spec trip(Breaker.t) :: :ok
   def trip(circuit), do: Breaker.Agent.trip(circuit.status)
 
   @doc """
@@ -91,6 +105,7 @@ defmodule Breaker do
       false
 
   """
+  @spec reset(Breaker.t) :: :ok
   def reset(circuit), do: Breaker.Agent.reset(circuit.status)
 
   @doc """
@@ -104,40 +119,49 @@ defmodule Breaker do
       false
 
   """
+  @spec open?(Breaker.t) :: boolean
   def open?(circuit), do: Breaker.Agent.open?(circuit.status)
 
   #####
   # Request calls
 
+  @spec get(Breaker.t, String.t) :: Task.t
   def get(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :get, options])
   end
 
+  @spec put(Breaker.t, String.t, []) :: Task.t
   def put(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :put, options])
   end
 
+  @spec head(Breaker.t, String.t, []) :: Task.t
   def head(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :head, options])
   end
 
+  @spec post(Breaker.t, String.t, []) :: Task.t
   def post(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :post, options])
   end
 
+  @spec patch(Breaker.t, String.t, []) :: Task.t
   def patch(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :patch, options])
   end
 
+  @spec delete(Breaker.t, String.t, []) :: Task.t
   def delete(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :delete, options])
   end
 
+  @spec options(Breaker.t, String.t, []) :: Task.t
   def options(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :options, options])
   end
 
-  def make_request(circuit, path, method, options \\ []) do
+  @spec make_request(Breaker.t, String.t, atom, []) :: %HTTPotion.Response{} | %HTTPotion.ErrorResponse{} | %Breaker.OpenCircuitError{}
+  def make_request(circuit, path, method, options) do
     %{status: agent, url: url} = circuit
     cond do
       Breaker.Agent.open?(agent) ->

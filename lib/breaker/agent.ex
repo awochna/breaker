@@ -6,6 +6,13 @@ defmodule Breaker.Agent do
   and the information required to calculate those.
   """
 
+  @typedoc """
+  Complex map holding a circuit's state.
+
+  Includes the current state, error_threshold, and counts.
+  """
+  @type t :: %{open: boolean, error_threshold: float, window_length: number, bucket_length: number, sum: %{total: number, errors: number}, window: [%{total: number, errors: number}]}
+
   @doc """
   Start a new circuit breaker state holder.
 
@@ -46,6 +53,7 @@ defmodule Breaker.Agent do
       true
 
   """
+  @spec start_link(%{}) :: {:ok, pid}
   def start_link(options \\ %{}) do
     options = options
     |> Map.put_new(:open, false)
@@ -77,6 +85,7 @@ defmodule Breaker.Agent do
       true
 
   """
+  @spec open?(pid) :: boolean
   def open?(circuit) do
     Agent.get(circuit, &Map.get(&1, :open))
   end
@@ -101,6 +110,7 @@ defmodule Breaker.Agent do
       true
 
   """
+  @spec trip(pid) :: :ok
   def trip(circuit) do
     Agent.update(circuit, &Map.put(&1, :open, true))
   end
@@ -125,6 +135,7 @@ defmodule Breaker.Agent do
       false
 
   """
+  @spec reset(pid) :: :ok
   def reset(circuit) do
     Agent.update(circuit, &Map.put(&1, :open, false))
   end
@@ -155,6 +166,7 @@ defmodule Breaker.Agent do
       :ok
 
   """
+  @spec count(pid, %HTTPotion.Response{} | %HTTPotion.ErrorResponse{}) :: :ok
   def count(circuit, response) do
     cond do
       response.__struct__ == HTTPotion.ErrorResponse ->
@@ -185,6 +197,7 @@ defmodule Breaker.Agent do
       true
 
   """
+  @spec recalculate(pid) :: :ok
   def recalculate(circuit) do
     Agent.update(circuit, __MODULE__, :calculate_status, [])
   end
@@ -205,6 +218,7 @@ defmodule Breaker.Agent do
       :ok
 
   """
+  @spec roll(pid) :: :ok
   def roll(circuit) do
     Agent.update(circuit, __MODULE__, :roll_window, [])
   end
@@ -219,6 +233,7 @@ defmodule Breaker.Agent do
       %{window: [%{total: 1, errors: 1}], sum: %{total: 1, errors: 1}}
 
   """
+  @spec count_miss(Breaker.Agent.t) :: Breaker.Agent.t
   def count_miss(circuit) do
     circuit
     |> add_to_current_window(:error)
@@ -235,12 +250,14 @@ defmodule Breaker.Agent do
       %{window: [%{total: 1, errors: 0}], sum: %{total: 1, errors: 0}}
 
   """
+  @spec count_hit(Breaker.Agent.t) :: Breaker.Agent.t
   def count_hit(circuit) do
     circuit
     |> add_to_current_window(:total)
     |> add_to_sum(:total)
   end
 
+  @spec roll_window(Breaker.Agent.t) :: Breaker.Agent.t
   def roll_window(state) do
     state
     |> shift_window()
@@ -248,6 +265,7 @@ defmodule Breaker.Agent do
     |> calculate_status()
   end
 
+  @spec calculate_status(Breaker.Agent.t) :: Breaker.Agent.t
   def calculate_status(state) do
     cond do
       state.sum.total == 0 ->
@@ -258,10 +276,12 @@ defmodule Breaker.Agent do
     end
   end
 
+  @spec shift_window(Breaker.Agent.t) :: Breaker.Agent.t
   defp shift_window(state) do
     Map.update!(state, :window, &([%{total: 0, errors: 0} | &1]))
   end
 
+  @spec trim_window(Breaker.Agent.t) :: Breaker.Agent.t
   defp trim_window(state) do
     cond do
       length(state.window) > state.window_length ->
@@ -278,6 +298,7 @@ defmodule Breaker.Agent do
     end
   end
 
+  @spec add_to_current_window(Breaker.Agent.t, atom) :: Breaker.Agent.t
   defp add_to_current_window(circuit, :total) do
     Map.update!(circuit, :window, fn([current | rest]) ->
       [Map.update!(current, :total, &(&1 + 1)) | rest]
@@ -292,6 +313,7 @@ defmodule Breaker.Agent do
     end)
   end
 
+  @spec add_to_sum(Breaker.Agent.t, atom) :: Breaker.Agent.t
   defp add_to_sum(circuit, :total) do
     Map.update!(circuit, :sum, fn(sum) ->
       Map.update!(sum, :total, &(&1 + 1))
