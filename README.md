@@ -1,6 +1,7 @@
 # Breaker #
 
 [![Build Status](https://travis-ci.org/awochna/breaker.svg?branch=master)](https://travis-ci.org/awochna/breaker)
+[![Coverage Status](https://coveralls.io/repos/github/awochna/breaker/badge.svg?branch=master)](https://coveralls.io/github/awochna/breaker?branch=master)
 
 A Circuit Breaker in Elixir for making HTTP(S) requests to external resources.
 Uses [HTTPotion](https://github.com/myfreeweb/httpotion) to make requests.
