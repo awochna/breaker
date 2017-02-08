@@ -104,32 +104,6 @@ defmodule Breaker do
   """
   def open?(circuit), do: Breaker.Agent.open?(circuit.status)
 
-  @doc ~S"""
-  Send a GET request to the path on the address.
-
-  Examples:
-
-      iex> options = %{url: "http://httpbin.org/"}
-      iex> circuit = Breaker.new(options)
-      iex> response = Breaker.get(circuit, "/get")
-      iex> response.status_code
-      200
-
-  """
-  def old_get(circuit, path) do
-    %{status: agent, url: url} = circuit
-    cond do
-      Breaker.Agent.open?(agent) ->
-        %Breaker.OpenCircuitError{}
-      true ->
-        request_address = URI.merge(url, path)
-        response = HTTPotion.get(request_address, [timeout: circuit.timeout])
-        Breaker.Agent.count(agent, response)
-        Breaker.Agent.recalculate(agent)
-        response
-    end
-  end
-
   #####
   # HTTPotion integration
 
