@@ -1,13 +1,13 @@
 defmodule Breaker do
   @moduledoc """
-  A circuit-breaker wrapped around HTTPotion to make requests to external
+  A circuit-breaker wrapped around `HTTPotion` to make requests to external
   resources and help your application gracefully fail.
 
   Also defines the `%Breaker{}` struct which represents a request circuit
   breaker, used with this module.
 
   Defines a function for each HTTP method (ie `Breaker.get()`) that returns a
-  Task that will execute the HTTP request (using HTTPotion) and record the
+  Task that will execute the HTTP request (using `HTTPotion`) and record the
   response in the circuit breaker.
   """
 
@@ -34,7 +34,7 @@ defmodule Breaker do
   * `url`: The base url to use for the breaker. This is ideally a single
     external resource, complete with protocal, domain name, port, and an
     optional subpath. Required.
-  * `headers`: A keyword list of headers, passed to HTTPotion.
+  * `headers`: A keyword list of headers, passed to `HTTPotion`.
   * `timeout`: How long to wait until considering the request timed out.
     Passed to HTTPotion.
   * `open`: Boolean defining if the circuit is broken. Defaults to false.

@@ -146,7 +146,7 @@ defmodule Breaker.Agent do
   ## Parameters: ##
 
   * `circuit`: The Agent containing the circuit's state.
-  * `response`: The received %HTTPotion.Response{}
+  * `response`: The received `%HTTPotion.Response{}`
 
   ## Examples: ##
 
