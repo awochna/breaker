@@ -74,6 +74,35 @@ defmodule Breaker do
   end
 
   @doc """
+  Checks if the given response is either a `%Breaker.OpenCircuitError{}`, a
+  timeout, or has a 500 status code.
+
+  ## Parameters: ##
+
+  * `response`: The response recieved from one of the HTTP method calls.
+
+  ## Examples: ##
+
+      iex> Breaker.error?(%Breaker.OpenCircuitError{})
+      true
+
+      iex> Breaker.error?(%HTTPotion.ErrorResponse{})
+      true
+
+      iex> Breaker.error?(%HTTPotion.Response{status_code: 500})
+      true
+
+      iex> Breaker.error?(%HTTPotion.Response{status_code: 200})
+      false
+
+  """
+  def error?(response) do
+    response.__struct__ == Breaker.OpenCircuitError ||
+    response.__struct__ == HTTPotion.ErrorResponse ||
+    response.status_code == 500
+  end
+
+  @doc """
   Trip the circuit.
 
   This sets the "open" status to true and has no effect if the "open" status
@@ -215,6 +244,14 @@ defmodule Breaker do
   This function isn't probably one you would want to use on your own and
   instead, use the method-specific functions (`Breaker.get()`). They return
   Tasks and are async, while this is sync.
+
+  ## Parameters: ##
+
+  * `circuit`: The circuit to make the request with.
+  * `path`: The request path, this is add to the circuit's `url`.
+  * `method`: An atom specifying the HTTP method, used by HTTPotion.
+  * `options`: Extra options to pass to HTTPotion. The circuit's `timeout` and
+    `headers` are also added to this.
 
   ## Examples: ##
 

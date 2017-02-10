@@ -175,13 +175,10 @@ defmodule Breaker.Agent do
   """
   @spec count(pid, %HTTPotion.Response{} | %HTTPotion.ErrorResponse{}) :: :ok
   def count(circuit, response) do
-    cond do
-      response.__struct__ == HTTPotion.ErrorResponse ->
-        Agent.update(circuit, __MODULE__, :count_miss, [])
-      response.status_code == 500 ->
-        Agent.update(circuit, __MODULE__, :count_miss, [])
-      true ->
-        Agent.update(circuit, __MODULE__, :count_hit, [])
+    if Breaker.error?(response) do
+      Agent.update(circuit, __MODULE__, :count_miss, [])
+    else
+      Agent.update(circuit, __MODULE__, :count_hit, [])
     end
   end
 
