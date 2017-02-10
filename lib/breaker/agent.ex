@@ -11,7 +11,14 @@ defmodule Breaker.Agent do
 
   Includes the current state, error_threshold, and counts.
   """
-  @type t :: %{open: boolean, error_threshold: float, window_length: number, bucket_length: number, sum: %{total: number, errors: number}, window: [%{total: number, errors: number}]}
+  @type t :: %{
+    open: boolean,
+    error_threshold: float,
+    window_length: number,
+    bucket_length: number,
+    sum: %{total: number, errors: number},
+    window: [%{total: number, errors: number}]
+  }
 
   @doc """
   Start a new circuit breaker state holder.
@@ -184,7 +191,7 @@ defmodule Breaker.Agent do
   ## Parameters: ##
 
   * `circuit`: The Agent containing the circuit's state.
-  
+
   ## Examples: ##
 
       iex> sum = %{total: 10, errors: 10}
@@ -280,12 +287,11 @@ defmodule Breaker.Agent do
   """
   @spec calculate_status(Breaker.Agent.t) :: Breaker.Agent.t
   def calculate_status(state) do
-    cond do
-      state.sum.total == 0 ->
-        Map.put(state, :open, false)
-      true ->
-        error_rate = state.sum.errors / state.sum.total
-        Map.put(state, :open, error_rate > state.error_threshold)
+    if state.sum.total == 0 do
+      Map.put(state, :open, false)
+    else
+      error_rate = state.sum.errors / state.sum.total
+      Map.put(state, :open, error_rate > state.error_threshold)
     end
   end
 
@@ -296,18 +302,17 @@ defmodule Breaker.Agent do
 
   @spec trim_window(Breaker.Agent.t) :: Breaker.Agent.t
   defp trim_window(state) do
-    cond do
-      length(state.window) > state.window_length ->
-        {removed, window} = List.pop_at(state.window, -1)
-        state
-        |> Map.put(:window, window)
-        |> Map.update!(:sum, fn(sum) ->
-          sum
-          |> Map.update!(:total, &(&1 - removed.total))
-          |> Map.update!(:errors, &(&1 - removed.errors))
-        end)
-      true ->
-        state
+    if length(state.window) <= state.window_length do
+      state
+    else
+      {removed, window} = List.pop_at(state.window, -1)
+      state
+      |> Map.put(:window, window)
+      |> Map.update!(:sum, fn(sum) ->
+        sum
+        |> Map.update!(:total, &(&1 - removed.total))
+        |> Map.update!(:errors, &(&1 - removed.errors))
+      end)
     end
   end
 

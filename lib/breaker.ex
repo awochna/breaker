@@ -21,7 +21,12 @@ defmodule Breaker do
   * `timeout`: The time to wait (in ms) before giving up on a request.
   * `status`: The process containing the circuit breaker's counts and state.
   """
-  @type t :: %Breaker{url: String.t, headers: [...], timeout: number, status: pid}
+  @type t :: %Breaker{
+    url: String.t,
+    headers: [...],
+    timeout: number,
+    status: pid
+  }
 
   @enforce_keys [:url]
   defstruct url: nil, headers: [], timeout: 3000, status: nil
@@ -139,7 +144,7 @@ defmodule Breaker do
       200
 
   """
-  @spec get(Breaker.t, String.t) :: Task.t
+  @spec get(Breaker.t, String.t, []) :: Task.t
   def get(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :get, options])
   end
@@ -219,24 +224,24 @@ defmodule Breaker do
       200
 
   """
-  @spec make_request(Breaker.t, String.t, atom, []) :: %HTTPotion.Response{} | %HTTPotion.ErrorResponse{} | %Breaker.OpenCircuitError{}
+  @spec make_request(Breaker.t, String.t, atom, []) :: %HTTPotion.Response{} |
+  %HTTPotion.ErrorResponse{} | %Breaker.OpenCircuitError{}
   def make_request(circuit, path, method, options \\ []) do
     %{status: agent, url: url} = circuit
-    cond do
-      Breaker.Agent.open?(agent) ->
-        %Breaker.OpenCircuitError{}
-      true ->
-        headers = options
-        |> Keyword.get(:headers, [])
-        |> Keyword.merge(circuit.headers, fn(_key, v1, _v2) -> v1 end)
-        options = options
-        |> Keyword.put_new(:timeout, circuit.timeout)
-        |> Keyword.put(:headers, headers)
-        request_address = URI.merge(url, path)
-        response = HTTPotion.request(method, request_address, options)
-        Breaker.Agent.count(agent, response)
-        Breaker.Agent.recalculate(agent)
-        response
+    if Breaker.Agent.open?(agent) do
+      %Breaker.OpenCircuitError{}
+    else
+      headers = options
+      |> Keyword.get(:headers, [])
+      |> Keyword.merge(circuit.headers, fn(_key, v1, _v2) -> v1 end)
+      options = options
+      |> Keyword.put_new(:timeout, circuit.timeout)
+      |> Keyword.put(:headers, headers)
+      request_address = URI.merge(url, path)
+      response = HTTPotion.request(method, request_address, options)
+      Breaker.Agent.count(agent, response)
+      Breaker.Agent.recalculate(agent)
+      response
     end
   end
 end

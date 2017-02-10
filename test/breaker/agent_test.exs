@@ -43,7 +43,7 @@ defmodule BreakerAgentTest do
     assert then.errors == 0
     assert now.errors == 1
   end
-    
+
   test "the state agent's window can be rolled, creating a new current bucket" do
     {:ok, agent} = Breaker.Agent.start_link()
     then = get_window(agent)
@@ -103,7 +103,7 @@ defmodule BreakerAgentTest do
     window = get_window(agent)
     assert length(window) == 2
   end
-  
+
   test "rolling also recalculates the circuit's status" do
     {:ok, agent} = Breaker.Agent.start_link(%{sum: %{total: 50, errors: 50}})
     refute Breaker.Agent.open?(agent)
@@ -118,7 +118,7 @@ defmodule BreakerAgentTest do
   end
 
   defp get_window(agent), do: Agent.get(agent, &(&1.window))
-  
+
   defp get_sum(agent), do: Agent.get(agent, &(&1.sum))
 
   defp get_current_bucket(agent), do: agent |> get_window() |> List.first()

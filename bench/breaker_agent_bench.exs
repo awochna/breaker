@@ -29,7 +29,7 @@ defmodule BreakerAgentBench do
   bench "count a hit", [pid: bench_context] do
     Breaker.Agent.count(pid, %HTTPotion.Response{status_code: 200})
   end
-  
+
   bench "count a miss", [pid: bench_context] do
     Breaker.Agent.count(pid, %HTTPotion.Response{status_code: 500})
   end
