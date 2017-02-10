@@ -257,6 +257,13 @@ defmodule Breaker.Agent do
     |> add_to_sum(:total)
   end
 
+  @doc """
+  Roll the calculation window for the given Breaker.Agent.t.
+
+  This creates a new current bucket, pushing the existing ones down the line,
+  potentially removes the oldest one (if `window_length` has been reached), and
+  recalculates the status of the breaker.
+  """
   @spec roll_window(Breaker.Agent.t) :: Breaker.Agent.t
   def roll_window(state) do
     state
@@ -265,6 +272,12 @@ defmodule Breaker.Agent do
     |> calculate_status()
   end
 
+  @doc """
+  Recalculates if the given Breaker.Agent state should be open or closed.
+
+  Checks the total number of requests and errors in the rolling window and
+  trips the circuit if it's higher than `error_threshold`.
+  """
   @spec calculate_status(Breaker.Agent.t) :: Breaker.Agent.t
   def calculate_status(state) do
     cond do

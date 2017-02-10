@@ -125,43 +125,102 @@ defmodule Breaker do
   #####
   # Request calls
 
+  @doc """
+  Make an async GET request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :get, options)`.
+
+  ## Examples: ##
+
+      iex> breaker = Breaker.new(%{url: "http://httpbin.org/"})
+      iex> request = Breaker.get(breaker, "/get")
+      iex> response = Task.await(request)
+      iex> response.status_code
+      200
+
+  """
   @spec get(Breaker.t, String.t) :: Task.t
   def get(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :get, options])
   end
 
+  @doc """
+  Make an async PUT request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :put, options)`.
+  """
   @spec put(Breaker.t, String.t, []) :: Task.t
   def put(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :put, options])
   end
 
+  @doc """
+  Make an async HEAD request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :head, options)`.
+  """
   @spec head(Breaker.t, String.t, []) :: Task.t
   def head(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :head, options])
   end
 
+  @doc """
+  Make an async POST request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :post, options)`.
+  """
   @spec post(Breaker.t, String.t, []) :: Task.t
   def post(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :post, options])
   end
 
+  @doc """
+  Make an async PATCH request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :patch, options)`.
+  """
   @spec patch(Breaker.t, String.t, []) :: Task.t
   def patch(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :patch, options])
   end
 
+  @doc """
+  Make an async DELETE request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :delete, options)`.
+  """
   @spec delete(Breaker.t, String.t, []) :: Task.t
   def delete(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :delete, options])
   end
 
+  @doc """
+  Make an async OPTIONS request to the specified path using the given breaker.
+
+  Task returning alias for `make_request(circuit, path, :options, options)`.
+  """
   @spec options(Breaker.t, String.t, []) :: Task.t
   def options(circuit, path, options \\ []) do
     Task.async(__MODULE__, :make_request, [circuit, path, :options, options])
   end
 
+  @doc """
+  Make an HTTP(S) request using the specified breaker, using the given method.
+
+  This function isn't probably one you would want to use on your own and
+  instead, use the method-specific functions (`Breaker.get()`). They return
+  Tasks and are async, while this is sync.
+
+  ## Examples: ##
+
+      iex> breaker = Breaker.new(%{url: "http://httpbin.org/"})
+      iex> response = Breaker.make_request(breaker, "/get", :get)
+      iex> response.status_code
+      200
+
+  """
   @spec make_request(Breaker.t, String.t, atom, []) :: %HTTPotion.Response{} | %HTTPotion.ErrorResponse{} | %Breaker.OpenCircuitError{}
-  def make_request(circuit, path, method, options) do
+  def make_request(circuit, path, method, options \\ []) do
     %{status: agent, url: url} = circuit
     cond do
       Breaker.Agent.open?(agent) ->
