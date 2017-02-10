@@ -13,6 +13,7 @@ defmodule Breaker.Mixfile do
       name: "breaker",
       source_url: "https://github.com/awochna/breaker",
       docs: [
+        main: "readme",
         extras: ["README.md"]
       ]
    ]

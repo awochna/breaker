@@ -66,6 +66,22 @@ cond do
 end
 ```
 
+### Other HTTP Methods ###
+
+Breaker has a function for each of the HTTP methods: `GET`, `POST`, `PUT`, `PATCH`, `HEAD`, `DELETE`, and `OPTIONS`.
+
+They follow the same easy convention as HTTPotion: `Breaker.get/3`, `Breaker.put/3`, etc.
+
+### Other Helpful Functions ###
+
+* `Breaker.open?/1` takes a breaker and returns a boolean, asking if it is open (won't allow network flow)
+* `Breaker.error?/1` takes a response and returns a boolean, asking if the response was some sort of error (Status Code of 500, timeout, `Breaker.OpenCircuitError`)
+* `Breaker.trip/1` sets the breaker's status to open, disallowing network flow.
+* `Breaker.reset/1` sets the breaker's status to closed, allowing network flow.
+
+You probably don't want to make use of `Breaker.trip/1` and `Breaker.reset/1` because the breaker's status will be recalculated after a request and override what you've manually set.
+This could be useful to push through a request, even to a service that is down or unhealthy.
+
 ## Configuration ##
 
 You can configure your new breaker a few different options.
