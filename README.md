@@ -2,6 +2,7 @@
 
 [![Build Status](https://travis-ci.org/awochna/breaker.svg?branch=master)](https://travis-ci.org/awochna/breaker)
 [![Coverage Status](https://coveralls.io/repos/github/awochna/breaker/badge.svg?branch=master)](https://coveralls.io/github/awochna/breaker?branch=master)
+[![Inline docs](https://inch-ci.org/github/awochna/breaker.svg)](https://inch-ci.org/github/awochna/breaker)
 [![Ebert](https://ebertapp.io/github/awochna/breaker.svg)](https://ebertapp.io/github/awochna/breaker)
 
 A Circuit Breaker in Elixir for making HTTP(S) requests to external resources.

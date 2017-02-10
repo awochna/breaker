@@ -43,9 +43,10 @@ defmodule Breaker.Mixfile do
       {:benchfella, "~> 0.3.0", only: :dev},
       {:coverex, "~> 1.4.10", only: :test},
       {:credo, "~> 0.5", only: [:dev, :test]},
-      {:earmark, "~> 1.1", only: :dev},
-      {:ex_doc, "~> 0.14", only: :dev},
-      {:httpotion, "~> 3.0.2"}
+      {:earmark, "~> 1.1", only: [:dev, :docs]},
+      {:ex_doc, "~> 0.14", only: [:dev, :docs]},
+      {:httpotion, "~> 3.0.2"},
+      {:inch_ex, only: :docs}
     ]
   end
 end

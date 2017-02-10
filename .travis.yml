@@ -2,3 +2,6 @@ language: elixir
 elixir:
   - 1.4.0
 script: "mix test --cover"
+after_script:
+  - MIX_ENV=docs mix deps.get
+  - MIX_ENV=docs mix inch.report
