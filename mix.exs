@@ -9,13 +9,15 @@ defmodule Breaker.Mixfile do
       test_coverage: [tool: Coverex.Task, coveralls: true],
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      deps: deps(),
       name: "breaker",
       source_url: "https://github.com/awochna/breaker",
       docs: [
         main: "readme",
         extras: ["README.md"]
-      ]
+      ],
+      package: package(),
+      description: description(),
+      deps: deps()
    ]
   end
 
@@ -48,6 +50,29 @@ defmodule Breaker.Mixfile do
       {:ex_doc, "~> 0.14", only: [:dev, :docs]},
       {:httpotion, "~> 3.0.2"},
       {:inch_ex, only: :docs}
+    ]
+  end
+
+  defp description do
+    """
+    A circuit breaker for HTTP requests in Elixir.
+
+    HTTP calls are made using HTTPotion and their success rate is recorded in
+    the circuit breaker. Upon passing a specified error threshold, the circuit
+    breaks, allowing your application to gracefully degrade quickly, rather
+    than hang waiting for an external HTTP service that may have disappeared.
+    """
+  end
+
+  defp package do
+    [
+      name: :breaker,
+      maintainers: ["Alex Wochna"],
+      licenses: ["MIT"],
+      links: %{
+        "GitHub" => "https://github.com/awochna/breaker",
+        "Docs" => "https://hexdocs.pm/breaker"
+      }
     ]
   end
 end
