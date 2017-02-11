@@ -55,12 +55,7 @@ defmodule Breaker.Mixfile do
 
   defp description do
     """
-    A circuit breaker for HTTP requests in Elixir.
-
-    HTTP calls are made using HTTPotion and their success rate is recorded in
-    the circuit breaker. Upon passing a specified error threshold, the circuit
-    breaks, allowing your application to gracefully degrade quickly, rather
-    than hang waiting for an external HTTP service that may have disappeared.
+    A circuit breaker for HTTP requests to external services in Elixir.
     """
   end
 

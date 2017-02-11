@@ -15,7 +15,7 @@ Add this project as a dependency in your mix.exs file:
 ```
 defp deps do
   [
-    {:breaker, git: "https://github.com/awochna/breaker.git", branch: "master"}
+    {:breaker, "~> 0.1.0"}
   ]
 end
 ```
