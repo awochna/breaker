@@ -41,6 +41,16 @@ defmodule BreakerTest do
     assert response.__struct__ == HTTPotion.ErrorResponse
   end
 
+  test "merges specified headers" do
+    headers = ["Authorization": "some auth string"]
+    circuit = Breaker.new(%{url: "http://httpbin.org/", headers: headers})
+    request = Breaker.get(circuit, "/headers", [headers: ["Accepts": "application/json"]])
+    response = Task.await(request)
+    json = Poison.decode!(response.body)
+    assert json["headers"]["Authorization"] == "some auth string"
+    assert json["headers"]["Accepts"] == "application/json"
+  end
+
   describe "standard HTTP methods" do
     test "get" do
       circuit = Breaker.new(%{url: "http://httpbin.org/"})

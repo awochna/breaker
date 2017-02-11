@@ -49,7 +49,8 @@ defmodule Breaker.Mixfile do
       {:earmark, "~> 1.1", only: [:dev, :docs]},
       {:ex_doc, "~> 0.14", only: [:dev, :docs]},
       {:httpotion, "~> 3.0.2"},
-      {:inch_ex, only: :docs}
+      {:inch_ex, only: :docs},
+      {:poison, "~> 2.0", only: [:dev, :test, :docs]}
     ]
   end
 
