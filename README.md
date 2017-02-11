@@ -1,5 +1,6 @@
 # Breaker #
 
+[![Hex.pm](https://img.shields.io/hexpm/v/breaker.svg)](https://hex.pm/packages/breaker)
 [![Build Status](https://travis-ci.org/awochna/breaker.svg?branch=master)](https://travis-ci.org/awochna/breaker)
 [![Coverage Status](https://coveralls.io/repos/github/awochna/breaker/badge.svg?branch=master)](https://coveralls.io/github/awochna/breaker?branch=master)
 [![Inline docs](https://inch-ci.org/github/awochna/breaker.svg)](https://inch-ci.org/github/awochna/breaker)
