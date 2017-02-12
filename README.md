@@ -42,7 +42,9 @@ You can make a request for some data you know you'll need later:
 ```
 # Makes a GET request to "http://example.com/users/42"
 user_request = Breaker.get(user_service, "/42")
+
 # do some other things, then later, when you need it
+
 user = Task.await(user_request)
 ```
 
@@ -54,7 +56,9 @@ service was good.
 ```
 body = build_new_user_body(new_user)
 request = Breaker.post(user_service, "/", [body: body])
+
 # do some other things,
+
 # then ensure you got a good response from your request,
 # otherwise put it in Redis or something for later
 response = Task.await(request)
@@ -85,8 +89,8 @@ This could be useful to push through a request, even to a service that is down o
 
 ## Configuration ##
 
-You can configure your new breaker a few different options.
-The following options affect each request made.
+You can configure your new breaker with a few different options.
+The following options affect each request made:
 
 * `url`: Required, the base URL for your external serivce, like "http://your-domain.com/users/" for your user service, or "http://users.your-domain.com/"
 * `headers`: Any headers (like in HTTPotion) that should be included in EVERY request made by the circuit breaker.
@@ -117,7 +121,7 @@ To give an example, say your application is happily going along, processing requ
 It's making an average of 1 request per second, using the default `bucket_length` and `window_length`.
 Then, it hits a dreaded 500 error.
 At this point, it's error rate was 0%, but just jumped to 10%, above the default `error_threshold`.
-Now, when you make a new request, the breaker is open, and instead of waiting up to 3 seconds to get a 500 error, the request fails fast, returning a `%Breaker.OpenCircuitError{}` instead.
+Now, when you make a new request, the breaker is open, and instead of waiting up to 3 seconds to get a 500 error, the request fails fast, returning a `%Breaker.OpenCircuitError{}`.
 In about 9 more seconds, the bucket that contained our 500 error will be rotated out, closing the circuit and leaving us with a clean slate.
 
 If our very next request now times out or gives a 500 (because the external service still isn't working properly), then we have an error rate of 100% and the circuit opens for another 10 seconds.
