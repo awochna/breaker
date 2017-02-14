@@ -67,7 +67,6 @@ defmodule Breaker.Mixfile do
       licenses: ["MIT"],
       links: %{
         "GitHub" => "https://github.com/awochna/breaker",
-        "Docs" => "https://hexdocs.pm/breaker"
       }
     ]
   end
