@@ -96,6 +96,8 @@ defmodule Breaker do
       false
 
   """
+  @spec error?(%Breaker.OpenCircuitError{} | %HTTPotion.ErrorResponse{} |
+  %HTTPotion.Response{}) :: boolean
   def error?(response) do
     response.__struct__ == Breaker.OpenCircuitError ||
     response.__struct__ == HTTPotion.ErrorResponse ||

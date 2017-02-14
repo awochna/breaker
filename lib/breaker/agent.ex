@@ -302,7 +302,7 @@ defmodule Breaker.Agent do
     if length(state.window) <= state.window_length do
       state
     else
-      {removed, window} = List.pop_at(state.window, -1)
+      {removed, window} = pop(state.window)
       state
       |> Map.put(:window, window)
       |> Map.update!(:sum, fn(sum) ->
@@ -340,5 +340,9 @@ defmodule Breaker.Agent do
       |> Map.update!(:total, &(&1 + 1))
       |> Map.update!(:errors, &(&1 + 1))
     end)
+  end
+
+  defp pop(list) do
+    {List.last(list), List.delete_at(list, -1)}
   end
 end
