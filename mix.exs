@@ -4,7 +4,7 @@ defmodule Breaker.Mixfile do
   def project do
     [
       app: :breaker,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.3",
       test_coverage: [tool: Coverex.Task, coveralls: true],
       build_embedded: Mix.env == :prod,
