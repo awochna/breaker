@@ -284,20 +284,20 @@ defmodule Breaker do
   @spec make_request(pid, String.t, atom, []) :: %HTTPotion.Response{} |
   %HTTPotion.ErrorResponse{} | %Breaker.OpenCircuitError{}
   def make_request(circuit, path, method, options \\ []) do
-    if Breaker.open?(circuit) do
-      %Breaker.OpenCircuitError{}
-    else
-      {headers, timeout, url} = GenServer.call(circuit, :options)
-      headers = options
-      |> Keyword.get(:headers, [])
-      |> Keyword.merge(headers, fn(_key, v1, _v2) -> v1 end)
-      options = options
-      |> Keyword.put_new(:timeout, timeout)
-      |> Keyword.put(:headers, headers)
-      request_address = URI.merge(url, path)
-      response = HTTPotion.request(method, request_address, options)
-      GenServer.cast(circuit, {:count, response})
-      response
+    case GenServer.call(circuit, :options) do
+      %Breaker.OpenCircuitError{} ->
+        %Breaker.OpenCircuitError{}
+      {headers, timeout, url} ->
+        headers = options
+        |> Keyword.get(:headers, [])
+        |> Keyword.merge(headers, fn(_key, v1, _v2) -> v1 end)
+        options = options
+        |> Keyword.put_new(:timeout, timeout)
+        |> Keyword.put(:headers, headers)
+        request_address = URI.merge(url, path)
+        response = HTTPotion.request(method, request_address, options)
+        GenServer.cast(circuit, {:count, response})
+        response
     end
   end
 
@@ -321,7 +321,11 @@ defmodule Breaker do
     {:reply, state.open, state}
   end
   def handle_call(:options, _from, state) do
-    {:reply, {state.headers, state.timeout, state.url}, state}
+    if state.open do
+      {:reply, %Breaker.OpenCircuitError{}, state}
+    else
+      {:reply, {state.headers, state.timeout, state.url}, state}
+    end
   end
   def handle_call(:trip, _from, state) do
     {:reply, :ok, Map.put(state, :open, true)}

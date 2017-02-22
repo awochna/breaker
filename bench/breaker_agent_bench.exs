@@ -41,4 +41,8 @@ defmodule BreakerAgentBench do
   bench "roll the health window", [pid: bench_context] do
     Breaker.roll(pid)
   end
+
+  bench "get options", [pid: bench_context] do
+    GenServer.call(pid, :options)
+  end
 end
