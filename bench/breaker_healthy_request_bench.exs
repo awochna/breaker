@@ -7,8 +7,13 @@ defmodule BreakerHealthyRequestBench do
     {:ok, breaker}
   end
 
-  bench "get request", [breaker: bench_context] do
+  bench "get request with breaker", [breaker: bench_context] do
     task = Breaker.get(breaker, "/status/200")
     Breaker.error?(Task.await(task))
+  end
+
+  bench "get request without breaker" do
+    response = HTTPotion.get("http://localhost:8080/status/200")
+    Breaker.error?(response)
   end
 end
