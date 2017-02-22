@@ -3,8 +3,7 @@ defmodule BreakerTimeoutRequestBench do
 
   setup_all do
     HTTPotion.start
-    breaker = Breaker.new(%{url: "http://localhost:8080/", timeout: 500})
-    {:ok, breaker}
+    Breaker.start_link(%{url: "http://localhost:8080/", timeout: 500})
   end
 
   bench "get request", [breaker: bench_context] do
