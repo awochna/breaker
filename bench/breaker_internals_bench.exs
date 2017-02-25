@@ -1,8 +1,8 @@
-defmodule BreakerAgentBench do
+defmodule BreakerInternalsBench do
   use Benchfella
 
   before_each_bench _ do
-    Breaker.start_link(%{url: "http://localhost:8080/"})
+    Breaker.start_link([url: "http://localhost:8080/"])
   end
 
   after_each_bench pid do
@@ -27,15 +27,15 @@ defmodule BreakerAgentBench do
   end
 
   bench "count a hit", [pid: bench_context] do
-    GenServer.cast(pid, {:count, %HTTPotion.Response{status_code: 200}})
+    Breaker.count(pid, %HTTPotion.Response{status_code: 200})
   end
 
   bench "count a miss", [pid: bench_context] do
-    GenServer.cast(pid, {:count, %HTTPotion.Response{status_code: 500}})
+    Breaker.count(pid, %HTTPotion.Response{status_code: 500})
   end
 
   bench "count a timeout", [pid: bench_context] do
-    GenServer.cast(pid, {:count, %HTTPotion.ErrorResponse{}})
+    Breaker.count(pid, %HTTPotion.ErrorResponse{})
   end
 
   bench "roll the health window", [pid: bench_context] do
