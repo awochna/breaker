@@ -10,7 +10,7 @@ A Circuit Breaker in Elixir for making async HTTP(S) requests to external resour
 Uses [HTTPotion](https://github.com/myfreeweb/httpotion) to make requests.
 
 The following README documentation is for the `master` branch.
-Maybe you're looking for the [0.1.1 docs](http://hexdocs.pm/breaker/0.1.1/)?
+Maybe you're looking for the [1.0.0 docs](http://hexdocs.pm/breaker/1.0.0/)?
 
 ## Installation ##
 
@@ -19,7 +19,7 @@ Add this project as a dependency in your mix.exs file:
 ```
 defp deps do
   [
-    {:breaker, "~> 0.1.1"}
+    {:breaker, "~> 1.0.0"}
   ]
 end
 ```
