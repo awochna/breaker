@@ -33,7 +33,7 @@ And then run:
 To create a circuit breaker for an external resource, do something like the following:
 
 ```
-user_service = Breaker.start_link([url: "http://example.com/users/"])
+{:ok, user_service} = Breaker.start_link([url: "http://example.com/users/"])
 ```
 
 Then, you can use it and Breaker to make HTTP calls:
@@ -79,6 +79,18 @@ end
 Breaker has a function for each of the HTTP methods: `GET`, `POST`, `PUT`, `PATCH`, `HEAD`, `DELETE`, and `OPTIONS`.
 
 They follow the same easy convention as HTTPotion: `Breaker.get/3`, `Breaker.put/3`, etc.
+
+### Naming your Breaker ###
+
+`Breaker.start_link` can accept an extra parameter and will pass it directly to GenServer as a name to register the process.
+
+```
+Breaker.start_link([url: "http://example.com/users/"], :user_service)
+# Now you can just use the registered name
+user_request = Breaker.get(:user_service, "/42")
+```
+
+This makes it easier to use application-wide breakers and supervision trees.
 
 ### Other Helpful Functions ###
 

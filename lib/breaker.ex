@@ -45,6 +45,7 @@ defmodule Breaker do
   ## Parameters: ##
 
   * `options`: A Keyword list of options, described below.
+  * `name`: The name to register the GenServer.
 
   ## Available options are: ##
 
@@ -71,9 +72,9 @@ defmodule Breaker do
       true
 
   """
-  @spec start_link([url: String.t]) :: {:ok, pid}
-  def start_link(options) do
-    GenServer.start_link(__MODULE__, options)
+  @spec start_link([url: String.t], atom | tuple) :: {:ok, pid}
+  def start_link(options, name \\ nil) do
+    GenServer.start_link(__MODULE__, options, name: name)
   end
 
   @doc """
