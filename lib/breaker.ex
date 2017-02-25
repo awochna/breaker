@@ -40,7 +40,7 @@ defmodule Breaker do
   ### Public API
 
   @doc """
-  Create a new circuit-breaker with the given options map.
+  Create a new circuit-breaker with the given options keyword list.
 
   Available options are:
 
@@ -61,13 +61,13 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://httpbin.org/"}
+      iex> options = [url: "http://httpbin.org/"]
       iex> {:ok, circuit} = Breaker.start_link(options)
       iex> is_pid(circuit)
       true
 
   """
-  @spec start_link(%{url: String.t}) :: {:ok, pid}
+  @spec start_link([url: String.t]) :: {:ok, pid}
   def start_link(options) do
     GenServer.start_link(__MODULE__, options)
   end
@@ -114,7 +114,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> {:ok, circuit} = Breaker.start_link(%{url: "http://httpbin.org/"})
+      iex> {:ok, circuit} = Breaker.start_link([url: "http://httpbin.org/"])
       iex> response = Breaker.get(circuit, "/get") |> Task.await
       iex> response.status_code
       200
@@ -131,7 +131,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://httpbin.org/", open: true}
+      iex> options = [url: "http://httpbin.org/", open: true]
       iex> {:ok, circuit} = Breaker.start_link(options)
       iex> Breaker.open?(circuit)
       true
@@ -148,7 +148,7 @@ defmodule Breaker do
 
   Examples:
 
-      iex> options = %{url: "http://httpbin.org/"}
+      iex> options = [url: "http://httpbin.org/"]
       iex> {:ok, circuit} = Breaker.start_link(options)
       iex> Breaker.open?(circuit)
       false
@@ -167,7 +167,7 @@ defmodule Breaker do
 
   ## Examples: ##
 
-      iex> options = %{url: "http://httpbin.org/", window: [%{total: 1, errors: 0}]}
+      iex> options = [url: "http://httpbin.org/", window: [%{total: 1, errors: 0}]]
       iex> {:ok, circuit} = Breaker.start_link(options)
       iex> Breaker.roll(circuit)
       :ok
@@ -190,7 +190,7 @@ defmodule Breaker do
 
   ## Examples: ##
 
-      iex> {:ok, circuit} = Breaker.start_link(%{url: "http://httpbin.org/"})
+      iex> {:ok, circuit} = Breaker.start_link([url: "http://httpbin.org/"])
       iex> Breaker.count(circuit, %HTTPotion.ErrorResponse{})
       :ok
 
@@ -208,7 +208,7 @@ defmodule Breaker do
 
   ## Examples: ##
 
-      iex> {:ok, breaker} = Breaker.start_link(%{url: "http://httpbin.org/"})
+      iex> {:ok, breaker} = Breaker.start_link([url: "http://httpbin.org/"])
       iex> request = Breaker.get(breaker, "/get")
       iex> response = Task.await(request)
       iex> response.status_code
@@ -297,7 +297,7 @@ defmodule Breaker do
 
   ## Examples: ##
 
-      iex> {:ok, breaker} = Breaker.start_link(%{url: "http://httpbin.org/"})
+      iex> {:ok, breaker} = Breaker.start_link([url: "http://httpbin.org/"])
       iex> response = Breaker.make_request(breaker, "/get", :get)
       iex> response.status_code
       200
@@ -318,17 +318,18 @@ defmodule Breaker do
         |> Keyword.put(:headers, headers)
         request_address = URI.merge(url, path)
         response = HTTPotion.request(method, request_address, options)
-        GenServer.cast(circuit, {:count, response})
+        Breaker.count(circuit, response)
         response
     end
   end
 
   ### GenServer API
 
-  @spec init(map) :: {:ok | :stop, :missing_url | map}
+  @spec init(keyword) :: {:ok | :stop, :missing_url | map}
   def init(options) do
-    if Map.has_key?(options, :url) do
+    if Keyword.has_key?(options, :url) do
       state = options
+      |> Enum.into(%{})
       |> Map.put_new(:headers, [])
       |> Map.put_new(:timeout, 3000)
       |> Map.put_new(:open, false)
