@@ -164,7 +164,7 @@ defmodule Breaker do
 
   @doc """
   Ask if the circuit is open or not.
-  
+
   Don't forget, an open circuit is one that is not properly connected and thus
   does not allow electrons to flow. In this case, it does not allow
   communication to the external resource. I get this mixed up in my head
