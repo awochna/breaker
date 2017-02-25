@@ -100,7 +100,6 @@ This makes it easier to use application-wide breakers and supervision trees.
 * `Breaker.reset/1` sets the breaker's status to closed, allowing network flow.
 
 You probably don't want to make use of `Breaker.trip/1` and `Breaker.reset/1` because the breaker's status will be recalculated after a request and override what you've manually set.
-This could be useful to push through a request, even to a service that is down or unhealthy.
 
 ## Configuration ##
 
@@ -111,43 +110,44 @@ The following options affect each request made:
 * `headers`: Any headers (like in HTTPotion) that should be included in EVERY request made by the circuit breaker.
 This could be something like an authentication token or a service identifier for logs.
 The default is `[]`.
-* `timeout`: The number of ms before giving up on a request. This is passed to HTTPotion and has a default of `3000`, or 3 seconds.
+* `timeout`: The number of milliseconds before giving up on a request. This is passed to HTTPotion and has a default of `3000`, or 3 seconds.
 
 The following options affect how the breaker's status is calculated:
 
 * `error_threshold`: The percent (as a float) of requests that are allowed to be bad (bad = 500 or timeout).
 The default is `0.05` or 5%.
-Once this threshold is broken, the breaker trips and more requests will return `%Breaker.OpenCircuitError{}` responses.
+Once this threshold is passed, the breaker trips and more requests will return `%Breaker.OpenCircuitError{}` responses.
 * `bucket_length`: The breaker uses multiple buckets in a health window to determine the `error_rate`.
-This setting specifies, in ms, how long a bucket should be.
+This setting specifies, in milliseconds, how long a bucket should be.
 The default is `1000` or 1 second.
 * `window_length`: The length (in buckets) of the health window.
-This number, multiplied by `bucket_length` is the total number of ms used to calculate health.
+This number, multiplied by `bucket_length` is the total number of milliseconds used to calculate health.
 The default is `10`.
 
 ## Understanding 'buckets' and 'windows' ##
 
 The breaker uses multiple 'buckets' in a 'window' to determine health and roll out old requests.
-Buckets are measured in time (ms) and windows are measured in buckets.
+Buckets are measured in time (milliseconds) and windows are measured in buckets.
 This means that using the defaults, health is calculated based on responses received in the last 10 seconds of operation.
 I highly encourage you to play with these settings to accomodate your individual traffic.
 
 To give an example, say your application is happily going along, processing requests and making requests of an external service, the User Serivce.
 It's making an average of 1 request per second, using the default `bucket_length` and `window_length`.
-Then, it hits a dreaded 500 error.
+Then, it hits a 500 error.
 At this point, it's error rate was 0%, but just jumped to 10%, above the default `error_threshold`.
-Now, when you make a new request, the breaker is open, and instead of waiting up to 3 seconds to get a 500 error, the request fails fast, returning a `%Breaker.OpenCircuitError{}`.
+Now, when you make a new request, the breaker is open.
+Instead of waiting up to 3 seconds to get a 500 error or timeout, the request fails fast, returning a `%Breaker.OpenCircuitError{}`.
 In about 9 more seconds, the bucket that contained our 500 error will be rotated out, closing the circuit and leaving us with a clean slate.
 
 If our very next request now times out or gives a 500 (because the external service still isn't working properly), then we have an error rate of 100% and the circuit opens for another 10 seconds.
 
 If, instead, the service had recovered while the circuit was open, then we only have (at most) about 10 seconds of missed requests.
-Hopefully, we have designed our application such that those requests to not be absolutely required, or we've stashed them in a queue somewhere for processing later.
+Hopefully, we have designed our application such that those requests are not absolutely required, or we've stashed them in a queue somewhere for processing later.
 
 The above is a greatly simplified example because normally you'll want to create a breaker for something that you'll need to make calls against at a much higher rate.
 Basically, keep the following things in mind when configuring your breaker:
 
-* `bucket_length` should be long enough that, on average, you'll have 5 or more requests in that period of time.
+* `bucket_length` should be long enough that, on average, you'll have 5 or more requests in that period of time. For the above example, we'd probably want `5000`.
 * `window_length` should be high enough that you give the external service time to recover, but low enough that errors from awhile ago aren't bogging down your application's performance or features now.
 The default might just be good enough unless you've found a reason to change it.
 * `error_threshold` should be low enough that your users aren't dealing with a really slow experience.
