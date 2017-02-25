@@ -3,8 +3,7 @@ defmodule BreakerUnhealthyRequestBench do
 
   setup_all do
     HTTPotion.start
-    breaker = Breaker.new(%{url: "http://localhost:8080/"})
-    {:ok, breaker}
+    Breaker.start_link(%{url: "http://localhost:8080/"})
   end
 
   bench "get request with breaker", [breaker: bench_context] do
