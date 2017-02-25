@@ -33,7 +33,7 @@ And then run:
 To create a circuit breaker for an external resource, do something like the following:
 
 ```
-user_service = Breaker.start_link(%{url: "http://example.com/users/"})
+user_service = Breaker.start_link([url: "http://example.com/users/"])
 ```
 
 Then, you can use it and Breaker to make HTTP calls:
