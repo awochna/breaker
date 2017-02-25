@@ -11,6 +11,11 @@ defmodule BreakerTest do
     assert_receive({:EXIT, _, :missing_url})
   end
 
+  test "accepts a name and can be called using the name" do
+    Breaker.start_link(@options, :httpbin)
+    refute Breaker.open?(:httpbin)
+  end
+
   test "get with unbroken circuit" do
     {:ok, circuit} = Breaker.start_link(@options)
     response = circuit |> Breaker.get("/get") |> Task.await
