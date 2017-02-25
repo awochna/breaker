@@ -42,7 +42,11 @@ defmodule Breaker do
   @doc """
   Create a new circuit-breaker with the given options keyword list.
 
-  Available options are:
+  ## Parameters: ##
+
+  * `options`: A Keyword list of options, described below.
+
+  ## Available options are: ##
 
   * `url`: The base url to use for the breaker. This is ideally a single
     external resource, complete with protocal, domain name, port, and an
@@ -59,7 +63,7 @@ defmodule Breaker do
     1000, meaning health is caluculated over the past 10 seconds using the
     defaults.
 
-  Examples:
+  ## Examples: ##
 
       iex> options = [url: "http://httpbin.org/"]
       iex> {:ok, circuit} = Breaker.start_link(options)
@@ -112,7 +116,11 @@ defmodule Breaker do
   This has the effect of cutting off communications using the circuit and
   starts the restoration process to test if the external source is healthy.
 
-  Examples:
+  ## Parameters ##
+
+  * `circuit`: The pid of the breaker to trip.
+
+  ## Examples: ##
 
       iex> {:ok, circuit} = Breaker.start_link([url: "http://httpbin.org/"])
       iex> response = Breaker.get(circuit, "/get") |> Task.await
@@ -129,7 +137,18 @@ defmodule Breaker do
   @doc """
   Reset the circuit breaker.
 
-  Examples:
+  This sets the "open" status to false and has no effect if the "open" status
+  is already false.
+
+  This has the effect of restoring communications using the circuit, but it
+  does not clear any recent unhealthy requests. As such, it could recalculate
+  and trip itself again at the end of the next request or after a roll.
+
+  ## Parameters: ##
+
+  * `circuit`: The pid of the breaker to reset.
+
+  ## Examples: ##
 
       iex> options = [url: "http://httpbin.org/", open: true]
       iex> {:ok, circuit} = Breaker.start_link(options)
@@ -145,8 +164,17 @@ defmodule Breaker do
 
   @doc """
   Ask if the circuit is open or not.
+  
+  Don't forget, an open circuit is one that is not properly connected and thus
+  does not allow electrons to flow. In this case, it does not allow
+  communication to the external resource. I get this mixed up in my head
+  sometimes.
 
-  Examples:
+  ## Parameters: ##
+
+  * `circuit`: The pid of the breaker to check.
+
+  ## Examples: ##
 
       iex> options = [url: "http://httpbin.org/"]
       iex> {:ok, circuit} = Breaker.start_link(options)
@@ -158,12 +186,12 @@ defmodule Breaker do
   def open?(circuit), do: GenServer.call(circuit, :open?)
 
   @doc """
-  Roll the window, creating a new bucket and possible pushing out an old one,
+  Roll the window, creating a new bucket and possibly pushing out an old one,
   updating the sum values as necessary.
 
   ## Parameters: ##
 
-  * `circuit`: The GenServer containing the circuit's state.
+  * `circuit`: The pid of the breaker to roll.
 
   ## Examples: ##
 
@@ -177,16 +205,19 @@ defmodule Breaker do
   def roll(circuit), do: GenServer.cast(circuit, :roll)
 
   @doc """
-  Count a given response to potentially update the status of the breaker.
+  Count a given response in the breaker's current bucket and sums.
 
   Adds the response to the current bucket of the health window, the total sum,
   and finalizes by recalculating the breaker's status.
 
   **You probably won't need to use this manually.**
 
+  This is done automatically when a request is made through this module.
+
   ## Parameters: ##
 
-  * `circuit`: The GenServer containing the circuit's state.
+  * `circuit`: The pid of the breaker to count in.
+  * `response`: The response received from a request.
 
   ## Examples: ##
 
@@ -206,6 +237,12 @@ defmodule Breaker do
 
   Task returning alias for `make_request(circuit, path, :get, options)`.
 
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   ## Examples: ##
 
       iex> {:ok, breaker} = Breaker.start_link([url: "http://httpbin.org/"])
@@ -224,6 +261,13 @@ defmodule Breaker do
   Make an async PUT request to the specified path using the given breaker.
 
   Task returning alias for `make_request(circuit, path, :put, options)`.
+
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   """
   @spec put(pid, String.t, []) :: Task.t
   def put(circuit, path, options \\ []) do
@@ -234,6 +278,13 @@ defmodule Breaker do
   Make an async HEAD request to the specified path using the given breaker.
 
   Task returning alias for `make_request(circuit, path, :head, options)`.
+
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   """
   @spec head(pid, String.t, []) :: Task.t
   def head(circuit, path, options \\ []) do
@@ -244,6 +295,13 @@ defmodule Breaker do
   Make an async POST request to the specified path using the given breaker.
 
   Task returning alias for `make_request(circuit, path, :post, options)`.
+
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   """
   @spec post(pid, String.t, []) :: Task.t
   def post(circuit, path, options \\ []) do
@@ -254,6 +312,13 @@ defmodule Breaker do
   Make an async PATCH request to the specified path using the given breaker.
 
   Task returning alias for `make_request(circuit, path, :patch, options)`.
+
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   """
   @spec patch(pid, String.t, []) :: Task.t
   def patch(circuit, path, options \\ []) do
@@ -264,6 +329,13 @@ defmodule Breaker do
   Make an async DELETE request to the specified path using the given breaker.
 
   Task returning alias for `make_request(circuit, path, :delete, options)`.
+
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   """
   @spec delete(pid, String.t, []) :: Task.t
   def delete(circuit, path, options \\ []) do
@@ -274,6 +346,13 @@ defmodule Breaker do
   Make an async OPTIONS request to the specified path using the given breaker.
 
   Task returning alias for `make_request(circuit, path, :options, options)`.
+
+  ## Parameters: ##
+
+  * `circuit`: The breaker to perform the request.
+  * `path`: The path string to append to the end of the breaker's `url`.
+  * `options`: Additional options passed to HTTPotion.
+
   """
   @spec options(pid, String.t, []) :: Task.t
   def options(circuit, path, options \\ []) do
