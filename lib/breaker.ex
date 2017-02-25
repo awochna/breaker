@@ -318,7 +318,7 @@ defmodule Breaker do
         |> Keyword.put(:headers, headers)
         request_address = URI.merge(url, path)
         response = HTTPotion.request(method, request_address, options)
-        GenServer.cast(circuit, {:count, response})
+        Breaker.count(circuit, response)
         response
     end
   end
