@@ -176,6 +176,28 @@ defmodule Breaker do
   @spec roll(pid) :: :ok
   def roll(circuit), do: GenServer.cast(circuit, :roll)
 
+  @doc """
+  Count a given response to potentially update the status of the breaker.
+
+  Adds the response to the current bucket of the health window, the total sum,
+  and finalizes by recalculating the breaker's status.
+
+  **You probably won't need to use this manually.**
+
+  ## Parameters: ##
+
+  * `circuit`: The GenServer containing the circuit's state.
+
+  ## Examples: ##
+
+      iex> {:ok, circuit} = Breaker.start_link(%{url: "http://httpbin.org/"})
+      iex> Breaker.count(circuit, %HTTPotion.ErrorResponse{})
+      :ok
+
+  """
+  @spec count(pid, %HTTPotion.Response{} | %HTTPotion.ErrorResponse{}) :: :ok
+  def count(circuit, response), do: GenServer.cast(circuit, {:count, response})
+
   #####
   # Request calls
 
@@ -303,20 +325,26 @@ defmodule Breaker do
 
   ### GenServer API
 
+  @spec init(map) :: {:ok | :stop, :missing_url | map}
   def init(options) do
-    state = options
-    |> Map.put_new(:headers, [])
-    |> Map.put_new(:timeout, 3000)
-    |> Map.put_new(:open, false)
-    |> Map.put_new(:error_threshold, 0.05)
-    |> Map.put_new(:window_length, 10)
-    |> Map.put_new(:bucket_length, 1000)
-    |> Map.put_new(:window, [%{total: 0, errors: 0}])
-    |> Map.put_new(:sum, %{total: 0, errors: 0})
-    :timer.apply_interval(state.bucket_length, __MODULE__, :roll, [self()])
-    {:ok, state}
+    if Map.has_key?(options, :url) do
+      state = options
+      |> Map.put_new(:headers, [])
+      |> Map.put_new(:timeout, 3000)
+      |> Map.put_new(:open, false)
+      |> Map.put_new(:error_threshold, 0.05)
+      |> Map.put_new(:window_length, 10)
+      |> Map.put_new(:bucket_length, 1000)
+      |> Map.put_new(:window, [%{total: 0, errors: 0}])
+      |> Map.put_new(:sum, %{total: 0, errors: 0})
+      :timer.apply_interval(state.bucket_length, __MODULE__, :roll, [self()])
+      {:ok, state}
+    else
+      {:stop, :missing_url}
+    end
   end
 
+  @spec handle_call(atom | tuple, pid, Breaker.t) :: {atom, any, Breaker.t}
   def handle_call(:open?, _from, state) do
     {:reply, state.open, state}
   end
@@ -334,6 +362,7 @@ defmodule Breaker do
     {:reply, :ok, Map.put(state, :open, false)}
   end
 
+  @spec handle_cast(atom | tuple, Breaker.t) :: {atom, Breaker.t}
   def handle_cast({:count, response}, state) do
     if Breaker.error?(response) do
       state = state

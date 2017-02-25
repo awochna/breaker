@@ -9,6 +9,9 @@
 A Circuit Breaker in Elixir for making async HTTP(S) requests to external resources.
 Uses [HTTPotion](https://github.com/myfreeweb/httpotion) to make requests.
 
+The following README documentation is for the `master` branch.
+Maybe you're looking for the [0.1.1 docs](http://hexdocs.pm/breaker/0.1.1/)?
+
 ## Installation ##
 
 Add this project as a dependency in your mix.exs file:
@@ -16,7 +19,7 @@ Add this project as a dependency in your mix.exs file:
 ```
 defp deps do
   [
-    {:breaker, "~> 0.1.0"}
+    {:breaker, "~> 0.1.1"}
   ]
 end
 ```
@@ -30,7 +33,7 @@ And then run:
 To create a circuit breaker for an external resource, do something like the following:
 
 ```
-user_service = Breaker.new(%{url: "http://example.com/users/"})
+user_service = Breaker.start_link(%{url: "http://example.com/users/"})
 ```
 
 Then, you can use it and Breaker to make HTTP calls:
